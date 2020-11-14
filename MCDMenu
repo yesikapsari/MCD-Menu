@@ -1,0 +1,356 @@
+MCD MENU
+
+I get this data from Kaggle, you can click this url below and Happy learning!
+
+https://www.kaggle.com/mcdonalds/nutrition-facts >Link to Kaggle
+
+First step, import libraries that will be used but you must install it when you dont
+
+import sys
+#!{sys.executable} -m pip install numpy
+!pip install pulp ##Install pupl library
+import pandas as pd
+import numpy as np
+import pandas as pd
+import seaborn as sns
+from pulp import *
+#import plotly.plotly as py
+#from plotly.offline import init_notebook_mode, iplot
+#init_notebook_mode(connected=True)
+#import plotly.graph_objs as go
+import matplotlib.pyplot as plt # matplotlib
+#import os
+
+McData = pd.read_csv('menu.csv')
+McData.head()
+Exploratory Data Analysis (EDA)
+#it will show statistic data each columns
+McData.describe()
+#Let's check info of data
+McData.info()
+
+#To find missing data
+missing_data = McData.isnull()
+missing_data.head(5)
+for column in missing_data.columns.values.tolist():
+    print(column)
+    print (missing_data[column].value_counts())
+    print("")   
+
+data_corr=McData.corr()
+plt.figure(figsize=(15,15))
+sns.heatmap(data_corr, vmin=-1, cmap='ocean', annot=True);
+print(data_corr['Calories'].sort_values(ascending=False).head(20))
+
+#We can analyze data from this boxplot
+num_attributes=McData[['Calories','Total Fat','Saturated Fat','Trans Fat','Cholesterol','Sodium','Carbohydrates']]                 
+fig = plt.figure(figsize=(30, 58))
+for i in range(len(num_attributes.columns)):
+    fig.add_subplot(19,14, i+1)
+    sns.boxplot(y=num_attributes.iloc[:,i])
+plt.tight_layout()
+plt.show()
+num_attributes=McData[[ 'Dietary Fiber', 'Sugars', 'Protein', 'Vitamin A (% Daily Value)', 'Vitamin C (% Daily Value)', 'Calcium (% Daily Value)', 'Iron (% Daily Value)']]
+fig = plt.figure(figsize=(30, 58))
+for i in range(len(num_attributes.columns)):
+    fig.add_subplot(19,14, i+1)
+    sns.boxplot(y=num_attributes.iloc[:,i])
+plt.tight_layout()
+plt.show()
+
+# Change data type
+McData.columns = list(map(str, McData.columns))
+all(isinstance(column, str) for column in McData.columns)
+
+#1. mean calories for overall menu
+print("Mean Calories of Overall MCD Menu:", McData['Calories'].mean() , "kcal")
+
+#2. mean nutrient for each category
+Cat = McData[['Category','Calories','Carbohydrates', 'Protein', 'Sugars', 'Total Fat', 'Cholesterol']]
+Category = Cat.groupby(['Category'],as_index=False).mean()
+Category.sort_index()
+
+#2. mean calories for each category
+Cal = Category[['Category','Calories']]
+CalCat = Cal.groupby(['Category'],as_index=False).mean()
+CalCat.sort_index()
+
+B. How much do beverages, like soda or coffee, contribute to the overall caloric intake?
+
+#CalCat.assign(FD=McDt.get_group('Beverages'))
+CalCat["FD"] = CalCat["Category"] 
+#Making new Category
+CalCat.at[0,'FD']= 'Food'
+CalCat.at[2:3,'FD']= 'Food'
+CalCat.at[5:6,'FD']= 'Food'
+CalCat.at[8,'FD']= 'Food'
+CalCat.at[1,'FD']= 'Drink'
+CalCat.at[4,'FD']= 'Drink'
+CalCat.at[7,'FD']= 'Drink'
+CalCat
+
+# Change data type
+McData.columns = list(map(str, McData.columns))
+all(isinstance(column, str) for column in McData.columns)
+titlemap = {'Beef & Pork': 0, 'Beverages':1, 'Breakfast':0, 'Chicken & Fish':0, 'Coffee & Tea':1, 'Desserts':0,
+            'Salads':0, 'Smoothies & Shakes':1, 'Snacks & Sides':0}
+for dataset in CalCat:
+    dataset['FD'] = dataset['FD'].map(titlemap)
+    
+#2. mean calories for drink category
+C1 = CalCat[['FD','Calories']]
+CalCat1 = C1.groupby(['FD'],as_index=False).mean()
+CalCat1.sort_index()
+
+C. Does ordered grilled chicken instead of crispy increase a sandwich's nutritional value?
+
+#Before we start to compare nutrient of them, we should select Item that only contains "Sandwich"
+df = McData[McData['Item'].str.contains("Classic Sandwich")]
+Sandwich = df.groupby('Item', axis=0).sum()
+print(type(df.groupby('Item', axis=0)))
+Sandwich.head(10)
+
+# Write your code below and press Shift+Enter to execute 
+Sandwich['Calories'] = Sandwich['Calories']/Sandwich['Calories'].max() 
+Sandwich['Cholesterol'] = Sandwich['Cholesterol']/Sandwich['Cholesterol'].max()
+Sandwich['Carbohydrates'] = Sandwich['Carbohydrates']/Sandwich['Carbohydrates'].max()
+Sandwich['Total Fat'] = Sandwich['Total Fat']/Sandwich['Total Fat'].max()
+Sandwich['Sodium'] = Sandwich['Sodium']/Sandwich['Sodium'].max()
+Sandwich['Dietary Fiber'] = Sandwich['Dietary Fiber']/Sandwich['Dietary Fiber'].max()
+Sandwich['Sugars'] = Sandwich['Sugars']/Sandwich['Sugars'].max()
+Sandwich['Protein'] = Sandwich['Protein']/Sandwich['Protein'].max()
+Sandwich['Vitamin A (% Daily Value)'] = Sandwich['Vitamin A (% Daily Value)']/Sandwich['Vitamin A (% Daily Value)'].max()
+Sandwich['Vitamin C (% Daily Value)'] = Sandwich['Vitamin C (% Daily Value)']/Sandwich['Vitamin C (% Daily Value)'].max()
+Sandwich['Calcium (% Daily Value)'] = Sandwich['Calcium (% Daily Value)']/Sandwich['Calcium (% Daily Value)'].max()
+Sandwich['Iron (% Daily Value)'] = Sandwich['Iron (% Daily Value)']/Sandwich['Iron (% Daily Value)'].max()
+# show the scaled columns
+Sandwich[["Calories","Cholesterol","Carbohydrates", 'Total Fat', 'Sodium','Dietary Fiber', 'Sugars','Protein', 'Vitamin A (% Daily Value)',
+        'Vitamin C (% Daily Value)','Calcium (% Daily Value)', 'Iron (% Daily Value)' ]].head(2)
+
+D. What about ordering egg whites instead of whole eggs?
+
+#Egg = McData[0:2]
+#Before we start to compare nutrient of them, we should select Item that only contains "Sandwich"
+dfz = McData[McData['Item'].str.contains("Sausage McMuffin with Egg")]
+Egg = dfz.groupby('Item', axis=0).sum()
+print(type(df.groupby('Item', axis=0)))
+Egg.head(10)
+
+# Write your code below and press Shift+Enter to execute 
+Egg['Calories'] = Egg['Calories']/Egg['Calories'].max() 
+Egg['Cholesterol'] = Egg['Cholesterol']/Egg['Cholesterol'].max()
+Egg['Carbohydrates'] = Egg['Carbohydrates']/Egg['Carbohydrates'].max()
+Egg['Total Fat'] = Egg['Total Fat']/Egg['Total Fat'].max()
+Egg['Sodium'] = Egg['Sodium']/Egg['Sodium'].max()
+Egg['Dietary Fiber'] = Egg['Dietary Fiber']/Egg['Dietary Fiber'].max()
+Egg['Sugars'] = Egg['Sugars']/Egg['Sugars'].max()
+Egg['Protein'] = Egg['Protein']/Egg['Protein'].max()
+Egg['Vitamin A (% Daily Value)'] = Egg['Vitamin A (% Daily Value)']/Egg['Vitamin A (% Daily Value)'].max()
+Egg['Vitamin C (% Daily Value)'] = Egg['Vitamin C (% Daily Value)']/Egg['Vitamin C (% Daily Value)'].max()
+Egg['Calcium (% Daily Value)'] = Egg['Calcium (% Daily Value)']/Egg['Calcium (% Daily Value)'].max()
+Egg['Iron (% Daily Value)'] = Egg['Iron (% Daily Value)']/Egg['Iron (% Daily Value)'].max()
+# show the scaled columns
+Egg[["Calories","Cholesterol","Carbohydrates", 'Total Fat', 'Sodium','Dietary Fiber', 'Sugars','Protein', 'Vitamin A (% Daily Value)',
+        'Vitamin C (% Daily Value)','Calcium (% Daily Value)', 'Iron (% Daily Value)' ]].head(2)
+
+Data Visualization
+
+A. How many calories does the average McDonald's value meal contain?
+%matplotlib inline 
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+mpl.style.use('ggplot') # optional: for ggplot-like style
+import seaborn as sns
+#plot
+ax=sns.catplot(x="Category", y="Calories", kind="bar", data=CalCat, height=7, aspect=2)
+
+B. How much do beverages, like soda or coffee, contribute to the overall caloric intake?
+colors_list = ['gold', 'yellowgreen', 'lightcoral', 'lightskyblue', 'lightgreen', 'pink', 'red', 'blue', "purple"]
+explode_list = [0.1, 0, 0.1, 0, 0.1, 0.1, 0., 0.1, 0] #jarak irisan pie
+label= CalCat['Category']
+CalCat['Calories'].plot(kind='pie',
+                            figsize=(15, 6), 
+                            autopct='%1.1f%%', 
+                            startangle=0,    
+                            shadow=True,  
+                             labels=None, 
+                            pctdistance=1.2,    # jarak tulisan persen dengan gambar pie
+                            colors=colors_list,  
+                           explode=explode_list 
+                            )
+# scale the title up by 12% to match pctdistance
+plt.title('Percentage Calories each Category', y=1.12) 
+plt.axis('equal') 
+# add legend
+plt.legend(labels=CalCat['Category'], loc='upper right') 
+plt.show()
+
+#2b
+colors_list = ['red', 'blue']
+explode_list = [0.1, 0] #jarak irisan pie
+label= CalCat1['FD']             
+CalCat1['Calories'].plot(kind='pie',
+                            figsize=(10, 6), 
+                            autopct='%1.1f%%', 
+                            startangle=0,    
+                            shadow=True,  
+                             labels=None, 
+                            pctdistance=1.2,    # jarak tulisan persen dengan gambar pie
+                            colors=colors_list,  
+                           explode=explode_list 
+                            )
+# scale the title up by 12% to match pctdistance
+plt.title('Persentasa Kalori Minuman terhadap Seluruh Menu', y=1.12) 
+plt.axis('equal') 
+# add legend
+plt.legend(labels=CalCat1['FD'], loc='upper right') 
+plt.show()
+
+C. Does ordered grilled chicken instead of crispy increase a sandwich's nutritional value?
+Sandwich.reset_index().plot(
+    x="Item", y=["Calories", "Carbohydrates", 'Cholesterol'], kind="bar"
+)
+plt.title("The Comparison of Calories, Carbohydrates, and Cholesterol which is Contained by Sandwich with Crispy or Grilled Chicken")
+plt.xlabel("Item")
+plt.ylabel("Value")
+Sandwich.reset_index().plot(
+    x="Item", y=["Total Fat", "Sodium", 'Dietary Fiber'], kind="bar"
+)
+plt.title("The Comparison of Total Fat, Sodium, and Dietary Fiber which is Contained by Sandwich with Crispy or Grilled Chicken")
+plt.xlabel("Item")
+plt.ylabel("Value")
+Sandwich.reset_index().plot(
+    x="Item", y=["Sugars", "Protein", 'Calcium (% Daily Value)'], kind="bar"
+)
+plt.title("The Comparison of Sugars, Protein, and Calcium which is Contained by Sandwich with Crispy or Grilled Chicken")
+plt.xlabel("Item")
+plt.ylabel("Value")
+Sandwich.reset_index().plot(
+    x="Item", y=["Vitamin A (% Daily Value)", "Vitamin C (% Daily Value)", 'Iron (% Daily Value)'], kind="bar"
+)
+plt.title("The Comparison of Vitamin A, Vitamin C, and Iron which is Contained by Sandwich with Crispy or Grilled Chicken")
+plt.xlabel("Item")
+plt.ylabel("Value")
+
+D. What about ordering egg whites instead of whole eggs?
+#Normalization
+Egg.reset_index().plot(
+    x="Item", y=["Calories", "Carbohydrates", 'Cholesterol'], kind="bar"
+)
+plt.title("The Comparison of Calories, Carbohydrates, and Cholesterol which is Contained by Sausage McMuffin with Whole Egg or Egg White")
+plt.xlabel("Item")
+plt.ylabel("Value")
+Egg.reset_index().plot(
+    x="Item", y=["Total Fat", "Sodium", 'Dietary Fiber'], kind="bar"
+)
+plt.title("The Comparison of Total Fat, Sodium, and Dietary Fiber which is Contained by Sausage McMuffin with Whole Egg or Egg White")
+plt.xlabel("Item")
+plt.ylabel("Value")
+
+Egg.reset_index().plot(
+    x="Item", y=["Sugars", "Protein", 'Calcium (% Daily Value)'], kind="bar"
+)
+plt.title("The Comparison of Sugars, Protein, and Calcium which is Contained by Sausage McMuffin with Whole Egg or Egg White")
+plt.xlabel("Item")
+plt.ylabel("Value")
+Egg.reset_index().plot(
+    x="Item", y=["Vitamin A (% Daily Value)", "Vitamin C (% Daily Value)", 'Iron (% Daily Value)'], kind="bar"
+)
+plt.title("The Comparison of Vitamin A, Vitamin C, and Iron which is Contained by Sausage McMuffin with Whole Egg or Egg White")
+plt.xlabel("Item")
+plt.ylabel("Value")
+
+E. What is the least number of items could you order from the menu to meet one day's nutritional requirements?
+For this case I use Linear Programming. So you must set constraint and boundary for objective function
+# Convert the item names to a list
+MenuItems = McData.Item.tolist()
+# Convert all of the macro nutrients fields to be dictionaries of the item names
+Calories = McData.set_index('Item')['Calories'].to_dict()
+TotalFat = McData.set_index('Item')['Total Fat'].to_dict()
+DietaryFiber = McData.set_index('Item')['Dietary Fiber'].to_dict()
+Carbohydrates = McData.set_index('Item')['Carbohydrates'].to_dict()
+Sugars = McData.set_index('Item')['Sugars'].to_dict()
+Protein = McData.set_index('Item')['Protein'].to_dict()
+Sodium = McData.set_index('Item')['Sodium'].to_dict()
+#Nutrient Content for Indonesian base Regulation of the Health Minister of Indonesia Republic number 28, 2019
+#1. Energy 2250 kkal v
+#2. Protein 60-65 gr v
+#3. Total Fat 65 gr v
+#4. Carbohydrates 360-430 gr v
+#5. Fiber 32 gr v
+#6. Sugars 50-60 gr (http://www.p2ptm.kemkes.go.id/) v
+#7. Sodium 5 gr v
+
+#This is OBJECTIVE FUNCTION
+prob = LpProblem("McOptimization Problem", LpMinimize)
+#CONSTRAINT
+MenuItems_vars = LpVariable.dicts("MenuItems",MenuItems,lowBound=0, upBound=10,cat='Integer')
+prob += lpSum([Calories[i]*MenuItems_vars[i] for i in MenuItems]), "Calories"
+prob += lpSum([TotalFat[i]*MenuItems_vars[i] for i in MenuItems]) <= 65, "TotalFat"
+prob += lpSum([DietaryFiber[i]*MenuItems_vars[i] for i in MenuItems]) <= 32, "Fiber"
+prob += lpSum([Carbohydrates[i]*MenuItems_vars[i] for i in MenuItems]) >= 360, "Carbohydrates_lower"
+prob += lpSum([Carbohydrates[i]*MenuItems_vars[i] for i in MenuItems]) <= 430, "Carbohydrates_upper"
+prob += lpSum([Sugars[i]*MenuItems_vars[i] for i in MenuItems]) >= 220, "Sugars_lower"
+prob += lpSum([Sugars[i]*MenuItems_vars[i] for i in MenuItems]) <= 260, "Sugars_upper"
+prob += lpSum([Protein[i]*MenuItems_vars[i] for i in MenuItems]) >= 60, "Protein_lower"
+prob += lpSum([Protein[i]*MenuItems_vars[i] for i in MenuItems]) <= 65, "Protein_upper"
+prob += lpSum([Sodium[i]*MenuItems_vars[i] for i in MenuItems]) <= 5000, "Sodium"
+prob.writeLP("McOptimization.lp")
+#RESULTS
+prob.solve() 
+print("Status:", LpStatus[prob.status]) #if you find 'Status: Optimal' while running,so your model is correct
+#Let's make an array with header
+data_matrix = []
+#Calculate the minimum calories
+for v in prob.variables():
+    if v.varValue > 0:
+        Item = McData.loc[McData['Item'] == v.name.replace('MenuItems_','').replace('_',' ')]
+        Item_Calories = Item['Calories'].values*v.varValue
+        Item_TotalFat = Item['Total Fat'].values*v.varValue
+        Item_Carbohydrates = Item['Carbohydrates'].values*v.varValue
+        Item_Protein = Item['Protein'].values*v.varValue
+        Item_Sodium = Item['Sodium'].values*v.varValue
+        Item_Sugars = Item['Sugars'].values*v.varValue
+        Item_DietaryFiber = Item['Dietary Fiber'].values*v.varValue
+        data_matrix.append([v.name.replace('MenuItems_','').replace('_',' '),v.varValue,Item_Calories[0],Item_TotalFat[0],Item_Carbohydrates[0],Item_Protein[0],Item_Sodium[0], Item_Sugars[0], Item_DietaryFiber[0]])
+print(' ')
+results = {}
+print("Total Calories = ", value(prob.objective))
+
+#lower and upper is boundary
+for constraint in prob.constraints:
+    s = 0
+    for var, coefficient in prob.constraints[constraint].items():
+        sum = var.varValue * coefficient
+    results[prob.constraints[constraint].name.replace('_lower','').replace('_upper','')] = s  
+ 
+!pip install plotly_express
+!pip install chart_studio
+!pip install cufflinks
+import chart_studio.plotly as py
+from plotly.offline import init_notebook_mode, iplot
+init_notebook_mode(connected=True)
+import plotly.graph_objs as go
+import matplotlib.pyplot as plt # matplotlib
+import os
+import plotly.figure_factory as ff
+import cufflinks as cf
+cf.set_config_file(offline=False, world_readable=True, theme='pearl')
+
+table = ff.create_table(data_matrix)
+data_matrix1=list(map(list, zip(*data_matrix)))
+ # list of name, degree, score 
+itm = data_matrix1[0] 
+amo = data_matrix1[1] 
+cal = data_matrix1[2] 
+tfat = data_matrix1[3]
+carb = data_matrix1[4]
+pro = data_matrix1[5]
+sdm = data_matrix1[6] 
+gul = data_matrix1[7]
+fbr = data_matrix1[8]
+# dictionary of lists  
+dict = {'Item': itm, 'Amount': amo, 'Calories': cal, 'Total Fat':tfat, 'Carbohydrates':carb, 'Protein':pro,'Sodium':sdm, 'Sugars':gul, 'Dietary Fiber':fbr}   
+df = pd.DataFrame(dict) 
+df
+
